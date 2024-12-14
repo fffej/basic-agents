@@ -1,5 +1,6 @@
 from typing import Any
 import asyncio
+import os
 from mcp.server.models import InitializationOptions
 import mcp.types as types
 from mcp.server import NotificationOptions, Server
@@ -7,6 +8,7 @@ import mcp.server.stdio
 import subprocess
 
 server = Server("shell")
+current_working_directory = os.getcwd()  # Store the working directory state
 
 @server.list_tools()
 async def handle_list_tools() -> list[types.Tool]:
@@ -27,14 +29,36 @@ async def handle_list_tools() -> list[types.Tool]:
                     },
                 }
             },
+        ),
+        types.Tool(
+            name="change_working_directory",
+            description="Changes the working directory for subsequent shell commands",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "directory": {
+                        "type": "string",
+                        "description": "The directory to change to",
+                    },
+                }
+            },
         )
     ]
 
 def run_command(command):
+    """
+    Run a shell command in the current working directory
+    """
     # Shell=True allows passing the full command as a string
     # capture_output=True captures stdout and stderr (Python 3.7+)
     # text=True returns string instead of bytes (Python 3.7+)
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    result = subprocess.run(
+        command, 
+        shell=True, 
+        capture_output=True, 
+        text=True,
+        cwd=current_working_directory
+    )
     return result.stdout
 
 @server.call_tool()
@@ -47,9 +71,25 @@ async def handle_call_tool(
     if not arguments:
         raise ValueError("Missing arguments")
     
+    global current_working_directory
     
-  
-    if name == "run-shell":
+    if name == "change_working_directory":
+        new_dir = dict(arguments)["directory"]
+        if not os.path.exists(new_dir):
+            return [
+                types.TextContent(
+                    type="text",
+                    text=f"Error: Directory {new_dir} does not exist"
+                )
+            ]
+        current_working_directory = os.path.abspath(new_dir)
+        return [
+            types.TextContent(
+                type="text",
+                text=f"Changed working directory to: {current_working_directory}"
+            )
+        ]
+    elif name == "run-shell":
         return [
             types.TextContent(
                 type="text",
