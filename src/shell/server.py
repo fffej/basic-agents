@@ -42,8 +42,7 @@ async def handle_call_tool(
     name: str, arguments: dict | None
 ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
     """
-    Handle tool execution requests.
-    Tools can fetch weather data and notify clients of changes.
+    Handles tool execution requests.
     """
     if not arguments:
         raise ValueError("Missing arguments")
@@ -76,6 +75,6 @@ async def main():
             ),
         )
 
-# This is needed if you'd like to connect to a custom client
+# This is needed if youd like to connect to a custom client
 if __name__ == "__main__":
     asyncio.run(main())
