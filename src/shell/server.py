@@ -10,6 +10,46 @@ import subprocess
 server = Server("shell")
 current_working_directory = os.getcwd()  # Store the working directory state
 
+PROMPTS = {
+    "define": types.Prompt(
+        name="define",
+        description="Define a word, term or concept",
+        arguments=[
+            types.PromptArgument(
+                name="term",
+                description="The term or concepts to define",
+                required=True
+            )
+        ]
+    )
+}
+
+@server.list_prompts()
+async def list_prompts() -> list[types.Prompt]:
+    return list(PROMPTS.values())
+
+@server.get_prompt()
+async def get_prompt(name: str, arguments: dict[str,str] | None = None
+) -> types.GetPromptResult:
+    if name not in PROMPTS:
+        raise ValueError(f"Prompt not found{name}")
+    
+    if name == "define":
+        term = arguments["term"] # Assume it must exist since required is true
+        return types.GetPromptResult(
+            messages=[
+                types.PromptMessage(
+                    role="assistant",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Provide a concise definition of {term}, and provide a real world analogy if possible."
+                    )
+                )
+            ]
+        )
+    
+    raise ValueError(f"Unknown prompt: {name}")
+
 @server.list_tools()
 async def handle_list_tools() -> list[types.Tool]:
     """
@@ -17,6 +57,19 @@ async def handle_list_tools() -> list[types.Tool]:
     Each tool specifies its arguments using JSON Schema validation.
     """
     return [
+        types.Tool(
+            name="web-search",
+            description="Searches the internet and retrieves the results in text format",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "search-expression": {
+                        "type": "string",
+                        "description": "The text to search for on the internet"
+                    }
+                }
+            }
+        ),
         types.Tool(
             name="run-shell",
             description="Runs a shell command in a UNIX environment",
@@ -44,6 +97,9 @@ async def handle_list_tools() -> list[types.Tool]:
             },
         )
     ]
+
+def web_search(expr):
+    return "done"
 
 def run_command(command):
     """
@@ -94,6 +150,13 @@ async def handle_call_tool(
             types.TextContent(
                 type="text",
                 text=run_command(dict(arguments)["command"])
+            )
+        ]
+    elif name == "web-search":
+        return [
+            types.TextContent(
+                type="text",
+                text=web_search(dict(arguments)["search-expression"])
             )
         ]
     else:
