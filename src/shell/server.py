@@ -6,6 +6,7 @@ import mcp.types as types
 from mcp.server import NotificationOptions, Server
 import mcp.server.stdio
 import subprocess
+from duckduckgo_search import DDGS
 
 server = Server("shell")
 current_working_directory = os.getcwd()  # Store the working directory state
@@ -59,7 +60,7 @@ async def handle_list_tools() -> list[types.Tool]:
     return [
         types.Tool(
             name="web-search",
-            description="Searches the internet and retrieves the results in text format",
+            description="Searches the internet and retrieves the results in text format, Can be used any time you need to get up to date results",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -99,7 +100,10 @@ async def handle_list_tools() -> list[types.Tool]:
     ]
 
 def web_search(expr):
-    return "done"
+    with DDGS() as ddgs:
+        results = ddgs.text(expr, max_results=5) 
+        combined_text = " ".join(result['body'] for result in results)
+        return combined_text
 
 def run_command(command):
     """
